@@ -22,6 +22,46 @@ export interface BuildTenantCiliumInput {
  */
 export function buildTenantCiliumPolicy(input: BuildTenantCiliumInput): CiliumNetworkPolicyDoc | null {
   if (input.dnsAllowlist.length === 0 && input.egressCidrs.length === 0) return null;
-  // Implementation continues in Task 7.
-  throw new Error("not implemented for non-empty input — see Task 7");
+
+  const egress: CiliumNetworkPolicyDoc["spec"]["egress"] = [];
+
+  // Always preserve kube-dns access. Without this, a dnsAllowlist of
+  // ["api.anthropic.com"] would also block DNS resolution for that very
+  // host and the agent would fail to resolve any FQDN at all.
+  egress.push({
+    toEndpoints: [{
+      matchLabels: {
+        "k8s:io.kubernetes.pod.namespace": "kube-system",
+        "k8s:k8s-app": "kube-dns",
+      },
+    }],
+    toPorts: [{
+      ports: [{ port: "53", protocol: "ANY" }],
+      rules: { dns: [{ matchPattern: "*" }] },
+    }],
+  });
+
+  if (input.dnsAllowlist.length > 0) {
+    egress.push({
+      toFQDNs: input.dnsAllowlist.map((dns) =>
+        dns.includes("*") ? { matchPattern: dns } : { matchName: dns },
+      ),
+    });
+  }
+  if (input.egressCidrs.length > 0) {
+    egress.push({ toCIDR: input.egressCidrs });
+  }
+
+  return {
+    apiVersion: "cilium.io/v2",
+    kind: "CiliumNetworkPolicy",
+    metadata: {
+      name: `paperclip-tenant-${input.companySlug}-restrict`,
+      namespace: input.namespace,
+    },
+    spec: {
+      endpointSelector: { matchLabels: { "paperclip.ai/managed-by": "paperclip" } },
+      egress,
+    },
+  };
 }

@@ -15,7 +15,11 @@ export interface CiliumNetworkPolicyDoc {
     egress: Array<{
       toFQDNs?: CiliumFqdn[];
       toEndpoints?: Array<{ matchLabels: Record<string, string> }>;
-      toPorts?: Array<{ ports: Array<{ port: string; protocol: string }> }>;
+      toCIDR?: string[];
+      toPorts?: Array<{
+        ports: Array<{ port: string; protocol: string }>;
+        rules?: { dns?: Array<{ matchPattern?: string; matchName?: string }> };
+      }>;
     }>;
   };
 }
