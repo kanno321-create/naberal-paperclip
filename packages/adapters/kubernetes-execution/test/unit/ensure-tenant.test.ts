@@ -125,4 +125,52 @@ describe("ensureTenantNamespace", () => {
     );
     expect(hasControlPlaneRule).toBe(false);
   });
+
+  it("applies a SECOND CNP when tenant Cilium DSL is non-empty", async () => {
+    const client = makeFakeClient();
+    const ciliumConnection = {
+      ...baseConnection,
+      capabilities: { ...baseConnection.capabilities, cilium: true },
+    };
+    await ensureTenantNamespace(client, {
+      ...baseInput,
+      connection: ciliumConnection,
+      tenantPolicy: {
+        quota: null, limitRange: null,
+        additionalAllowFqdns: [],
+        imageOverrides: null,
+        ciliumDnsAllowlist: ["api.anthropic.com"],
+        ciliumEgressCidrs: [],
+      },
+    });
+    // The fake client uses `request` for arbitrary CRD calls. Filter the call
+    // log to ciliumnetworkpolicies paths and count distinct CNP names.
+    const requestCalls = (client.request as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const cnpPaths = requestCalls
+      .map((c) => c[1] as string)
+      .filter((p) => typeof p === "string" && p.includes("ciliumnetworkpolicies"));
+    // Two distinct CNP target names appear: M1 baseline + the tenant-restrictive policy.
+    expect(cnpPaths.some((p) => p.includes("paperclip-agent-egress-l7"))).toBe(true);
+    expect(cnpPaths.some((p) => p.includes("paperclip-tenant-acme-corp-restrict"))).toBe(true);
+  });
+
+  it("does NOT apply a second CNP when tenant Cilium DSL is empty", async () => {
+    const client = makeFakeClient();
+    const ciliumConnection = {
+      ...baseConnection,
+      capabilities: { ...baseConnection.capabilities, cilium: true },
+    };
+    await ensureTenantNamespace(client, {
+      ...baseInput,
+      connection: ciliumConnection,
+      // tenantPolicy: null already in baseInput → both DSL arrays default to []
+    });
+    const requestCalls = (client.request as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const cnpPaths = requestCalls
+      .map((c) => c[1] as string)
+      .filter((p) => typeof p === "string" && p.includes("ciliumnetworkpolicies"));
+    // Only the M1 baseline; no -restrict CNP.
+    expect(cnpPaths.some((p) => p.includes("paperclip-agent-egress-l7"))).toBe(true);
+    expect(cnpPaths.some((p) => p.includes("paperclip-tenant-acme-corp-restrict"))).toBe(false);
+  });
 });

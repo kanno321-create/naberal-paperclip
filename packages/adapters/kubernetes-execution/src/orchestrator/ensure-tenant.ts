@@ -16,6 +16,7 @@ import {
 import {
   buildCiliumAgentEgressPolicy, applyCiliumNetworkPolicy,
 } from "./cilium-network-policy.js";
+import { buildTenantCiliumPolicy } from "./cilium-tenant-policy.js";
 import {
   buildImagePullSecret, applyImagePullSecret,
 } from "./image-pull-secret.js";
@@ -25,6 +26,10 @@ export interface TenantPolicy {
   limitRange: LimitRangeOverride | null;
   additionalAllowFqdns: string[];
   imageOverrides: Record<string, string> | null;
+  /** Cilium DSL — empty array means "no extra restrictions beyond M1 baseline". */
+  ciliumDnsAllowlist?: string[];
+  /** Cilium DSL — empty array means "no extra CIDR restrictions". */
+  ciliumEgressCidrs?: string[];
 }
 
 export interface EnsureTenantInput {
@@ -122,6 +127,20 @@ export async function ensureTenantNamespace(
         ? { matchLabels: input.controlPlane.namespaceLabels }
         : null,
     }));
+    // Tenant-restrictive Cilium policy: a SECOND CNP that intersects with the
+    // M1 baseline. Cilium evaluates multiple CNPs as AND, so the effective
+    // egress for the tenant becomes the M1 baseline ∩ this restriction —
+    // strictly tighter, never looser. Empty arrays in the policy → builder
+    // returns null → no second CNP applied.
+    const tenantCnp = buildTenantCiliumPolicy({
+      namespace,
+      companySlug: input.company.slug,
+      dnsAllowlist: input.tenantPolicy?.ciliumDnsAllowlist ?? [],
+      egressCidrs: input.tenantPolicy?.ciliumEgressCidrs ?? [],
+    });
+    if (tenantCnp) {
+      await applyCiliumNetworkPolicy(client, tenantCnp);
+    }
     ciliumApplied = true;
   }
 

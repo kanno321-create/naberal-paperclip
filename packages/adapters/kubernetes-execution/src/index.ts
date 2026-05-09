@@ -22,6 +22,7 @@ export {
   type TenantPolicy,
 } from "./orchestrator/ensure-tenant.js";
 
+export { buildTenantCiliumPolicy } from "./orchestrator/cilium-tenant-policy.js";
 export { createKubernetesApiClient } from "./client.js";
 export { probeClusterCapabilities } from "./orchestrator/capabilities.js";
 export { deriveNamespaceName, isValidDns1123Label } from "./orchestrator/naming.js";
