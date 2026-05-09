@@ -1,5 +1,16 @@
 # K8s Execution Target Changelog
 
+## M3a — 2026-05-09
+
+Production-readiness pass on the M2 Kubernetes execution path:
+
+- **Real claude-code end-to-end test** (`test/integration/claude-code-real.test.ts`). Gated on `K8S_INTEGRATION=1` + `ANTHROPIC_API_KEY`. Builds the real `agent-runtime-claude` image, seeds a workspace PVC with a fixture repo, runs the agent against real Anthropic, asserts the project name surfaces in pod logs.
+- **Real `issueGitCredentials`** (`server/src/services/git-credentials.ts`). Replaces the M2 stub. Resolves a `company_secrets` UUID via the existing `SecretProvider` registry, returns `{username, password}` decoded from JSON. New CLI subcommand `paperclip cluster set-git-credentials`.
+- **Empirical resource defaults** (`packages/adapters/kubernetes-execution/test/integration/empirical-measurement.test.ts`). 5 sequential real-claude-code runs measured under `metrics-server`. Defaults updated only when peaks crossed M1's threshold; new sizing doc at `docs/k8s-execution/sizing.md`.
+- **Per-tenant Cilium DSL** (`packages/adapters/kubernetes-execution/src/orchestrator/cilium-tenant-policy.ts`). New columns on `cluster_tenant_policies`: `cilium_dns_allowlist` + `cilium_egress_cidrs`. `ensureTenantNamespace` emits a *second* CNP that intersects with the M1 baseline (Cilium evaluates multiple CNPs as AND). Operator recipes at `docs/k8s-execution/cilium-recipes.md`.
+
+Schema migration `0084_tenant_policy_m3a.sql` adds 3 columns (`git_credentials_secret_id`, `cilium_dns_allowlist`, `cilium_egress_cidrs`) to `cluster_tenant_policies`.
+
 ## 2026-05-09 — Phase A complete
 
 Workspace strategy + realization types now live in @paperclipai/workspace-strategy.
