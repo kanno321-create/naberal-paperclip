@@ -1929,7 +1929,7 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
           blockedByIssueIds: blockerIds,
           assigneeAgentId: recoveryAction.ownerAgentId ?? input.issue.assigneeAgentId,
         });
-        if (!reblocked) return null;
+        if (reblocked) return reblocked;
       }
     }
 

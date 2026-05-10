@@ -2954,9 +2954,10 @@ export function IssueDetail() {
   const handleResumeFromBacklog = useCallback(async () => {
     await updateIssue.mutateAsync({ status: "todo" });
   }, [updateIssue.mutateAsync]);
+  const activeRecoveryActionId = issue?.activeRecoveryAction?.id;
   const handleResolveRecoveryAction = useCallback(
     (outcome: import("../components/IssueRecoveryActionCard").RecoveryResolveOutcome) => {
-      const actionId = issue?.activeRecoveryAction?.id;
+      const actionId = activeRecoveryActionId;
       if (!actionId) return;
       switch (outcome) {
         case "done":
@@ -2973,7 +2974,7 @@ export function IssueDetail() {
           return;
       }
     },
-    [issue, resolveRecoveryAction.mutateAsync],
+    [activeRecoveryActionId, resolveRecoveryAction.mutateAsync],
   );
 
   const treePreviewAffectedIssues = useMemo(

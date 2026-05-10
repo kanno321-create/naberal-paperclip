@@ -4,43 +4,20 @@ import type {
   IssueRelationIssueSummary,
   SuccessfulRunHandoffState,
 } from "@paperclipai/shared";
-import { AlertTriangle, Eye, Flag, OctagonAlert, RefreshCw, TriangleAlert } from "lucide-react";
+import { AlertTriangle, Flag } from "lucide-react";
 import { Link } from "@/lib/router";
 import { createIssueDetailPath } from "../lib/issueDetailBreadcrumb";
 import { IssueLinkQuicklook } from "./IssueLinkQuicklook";
 import { isAssignedBacklogBlocker } from "../lib/issue-blockers";
 import {
   deriveActiveRecoveryDisplayState,
-  type ActiveRecoveryDisplayState,
+  RECOVERY_CHIP_DEFAULT_TONE,
 } from "../lib/recovery-display";
-
-const BLOCKER_RECOVERY_TONE: Record<ActiveRecoveryDisplayState, { icon: typeof TriangleAlert; label: string; className: string }> = {
-  needed: {
-    icon: TriangleAlert,
-    label: "Recovery needed",
-    className: "border-amber-500/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  },
-  in_progress: {
-    icon: RefreshCw,
-    label: "Recovery in progress",
-    className: "border-sky-500/60 bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  },
-  observe_only: {
-    icon: Eye,
-    label: "Observing active run",
-    className: "border-border bg-muted text-muted-foreground",
-  },
-  escalated: {
-    icon: OctagonAlert,
-    label: "Recovery escalated",
-    className: "border-red-500/60 bg-red-500/15 text-red-700 dark:text-red-300",
-  },
-};
 
 function BlockerRecoveryIndicator({ action }: { action: IssueRecoveryAction }) {
   const state = deriveActiveRecoveryDisplayState(action);
   if (!state) return null;
-  const tone = BLOCKER_RECOVERY_TONE[state];
+  const tone = RECOVERY_CHIP_DEFAULT_TONE[state];
   const Icon = tone.icon;
   return (
     <span

@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import type { Issue, IssueRecoveryAction } from "@paperclipai/shared";
 import { Link } from "@/lib/router";
-import { Eye, Flag, OctagonAlert, RefreshCw, TriangleAlert, X } from "lucide-react";
+import { Eye, Flag, X } from "lucide-react";
 import {
   createIssueDetailPath,
   rememberIssueDetailLocationState,
   withIssueDetailHeaderSeed,
 } from "../lib/issueDetailBreadcrumb";
 import { cn } from "../lib/utils";
-import { deriveActiveRecoveryDisplayState } from "../lib/recovery-display";
+import { deriveActiveRecoveryDisplayState, RECOVERY_CHIP_DEFAULT_TONE } from "../lib/recovery-display";
 import { StatusIcon } from "./StatusIcon";
 import { productivityReviewTriggerLabel } from "./ProductivityReviewBadge";
 import { hasAssignedBacklogBlocker } from "../lib/issue-blockers";
@@ -236,38 +236,10 @@ export function IssueRow({
   );
 }
 
-const RECOVERY_CHIP_TONE: Record<
-  "needed" | "in_progress" | "observe_only" | "escalated",
-  { className: string; icon: typeof TriangleAlert; label: string }
-> = {
-  needed: {
-    className:
-      "border-amber-500/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
-    icon: TriangleAlert,
-    label: "Recovery needed",
-  },
-  in_progress: {
-    className:
-      "border-sky-500/60 bg-sky-500/15 text-sky-700 dark:text-sky-300",
-    icon: RefreshCw,
-    label: "Recovery in progress",
-  },
-  observe_only: {
-    className: "border-border bg-muted text-muted-foreground",
-    icon: Eye,
-    label: "Observing active run",
-  },
-  escalated: {
-    className: "border-red-500/60 bg-red-500/15 text-red-700 dark:text-red-300",
-    icon: OctagonAlert,
-    label: "Recovery escalated",
-  },
-};
-
 function renderRecoveryChip(action: IssueRecoveryAction, selected: boolean): ReactNode {
   const state = deriveActiveRecoveryDisplayState(action);
   if (!state) return null;
-  const tone = RECOVERY_CHIP_TONE[state];
+  const tone = RECOVERY_CHIP_DEFAULT_TONE[state];
   const Icon = tone.icon;
   return (
     <span

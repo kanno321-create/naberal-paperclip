@@ -252,14 +252,6 @@ export const resolveIssueRecoveryActionSchema = z.object({
     }
     return;
   }
-
-  if (value.sourceIssueStatus !== undefined && value.sourceIssueStatus !== null) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "This recovery outcome does not change the source issue status",
-      path: ["sourceIssueStatus"],
-    });
-  }
 });
 
 export type ResolveIssueRecoveryAction = z.infer<typeof resolveIssueRecoveryActionSchema>;

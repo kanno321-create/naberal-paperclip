@@ -9,40 +9,17 @@ import { queryKeys } from "../lib/queryKeys";
 import { cn, relativeTime } from "../lib/utils";
 import {
   deriveActiveRecoveryDisplayState,
-  type ActiveRecoveryDisplayState,
+  RECOVERY_CHIP_DEFAULT_TONE,
 } from "../lib/recovery-display";
-import { Eye, ExternalLink, OctagonAlert, RefreshCw, TriangleAlert } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Identity } from "./Identity";
 import { RunChatSurface } from "./RunChatSurface";
 import { useLiveRunTranscripts } from "./transcript/useLiveRunTranscripts";
 
-const RUN_CARD_RECOVERY_TONE: Record<ActiveRecoveryDisplayState, { icon: typeof TriangleAlert; label: string; className: string }> = {
-  needed: {
-    icon: TriangleAlert,
-    label: "Recovery needed",
-    className: "border-amber-500/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  },
-  in_progress: {
-    icon: RefreshCw,
-    label: "Recovery in progress",
-    className: "border-sky-500/60 bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  },
-  observe_only: {
-    icon: Eye,
-    label: "Observing active run",
-    className: "border-border bg-muted text-muted-foreground",
-  },
-  escalated: {
-    icon: OctagonAlert,
-    label: "Recovery escalated",
-    className: "border-red-500/60 bg-red-500/15 text-red-700 dark:text-red-300",
-  },
-};
-
 function RunCardRecoveryChip({ action }: { action: IssueRecoveryAction }) {
   const state = deriveActiveRecoveryDisplayState(action);
   if (!state) return null;
-  const tone = RUN_CARD_RECOVERY_TONE[state];
+  const tone = RECOVERY_CHIP_DEFAULT_TONE[state];
   const Icon = tone.icon;
   return (
     <span
