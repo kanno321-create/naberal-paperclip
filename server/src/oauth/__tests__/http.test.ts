@@ -181,6 +181,11 @@ describe("fetchAccountInfo", () => {
         res.end("unauthorized");
         return;
       }
+      if (req.url === "/flaky" && hits < 3) {
+        res.statusCode = 502;
+        res.end("temporary");
+        return;
+      }
       res.statusCode = 200;
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ id: "u1", auth: lastAuth }));
@@ -205,5 +210,11 @@ describe("fetchAccountInfo", () => {
 
   it("throws on non-2xx", async () => {
     await expect(fetchAccountInfo(`${server.url}/bad`, "TOKEN")).rejects.toThrow(/401/);
+  });
+
+  it("retries transient account info failures", async () => {
+    const res = await fetchAccountInfo(`${server.url}/flaky`, "TOKEN");
+    expect(res).toMatchObject({ id: "u1" });
+    expect(server.hits).toBe(3);
   });
 });

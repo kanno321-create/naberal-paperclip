@@ -57,7 +57,7 @@ describe("GET /api/oauth/callback/:providerId", () => {
         providerId: "github",
         consumedAt: new Date(),
         expiresAt: new Date(Date.now() + 60_000),
-        returnUrl: "/settings/connections",
+        returnUrl: "/settings/connections#provider-github",
         companyId: "c1",
         codeVerifier: "v",
         redirectUri: "x",
@@ -83,6 +83,7 @@ describe("GET /api/oauth/callback/:providerId", () => {
     );
     expect(res.status).toBe(302);
     expect(res.headers.location).toContain("oauth_error=replay");
+    expect(res.headers.location).toContain("#provider-github");
   });
 
   it("redirects with invalid_state when expires_at predicate fails", async () => {

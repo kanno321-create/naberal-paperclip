@@ -124,20 +124,43 @@ export async function exchangeToken(input: ExchangeTokenInput): Promise<Record<s
 }
 
 export async function fetchAccountInfo(url: string, accessToken: string): Promise<unknown> {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        accept: "application/json",
-        "user-agent": "paperclip-oauth/1.0",
-      },
-      signal: controller.signal,
-    });
+  let attempt = 0;
+  while (true) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          accept: "application/json",
+          "user-agent": "paperclip-oauth/1.0",
+        },
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(t);
+      if (attempt < RETRY_DELAYS_MS.length) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+        attempt++;
+        continue;
+      }
+      throw err;
+    }
+    clearTimeout(t);
+
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       const safeBody = sanitizeErrorBody(text);
+      if (res.status >= 500 && attempt < RETRY_DELAYS_MS.length) {
+        oauthLogger.warn(
+          { status: res.status, attempt },
+          "account info endpoint 5xx; retrying",
+        );
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+        attempt++;
+        continue;
+      }
       throw new OAuthRequestError(
         `account info fetch failed: ${res.status}${safeBody ? ` ${safeBody}` : ""}`,
         {
@@ -147,7 +170,5 @@ export async function fetchAccountInfo(url: string, accessToken: string): Promis
       );
     }
     return await res.json();
-  } finally {
-    clearTimeout(t);
   }
 }

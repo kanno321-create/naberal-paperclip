@@ -37,7 +37,7 @@ function back(
   for (const [k, v] of Object.entries(query)) {
     url.searchParams.set(k, v);
   }
-  return url.pathname + url.search;
+  return url.pathname + url.search + url.hash;
 }
 
 function secretName(
