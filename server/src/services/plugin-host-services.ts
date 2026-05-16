@@ -7,7 +7,6 @@ import {
   heartbeatRuns,
   issues as issuesTable,
   pluginLogs,
-  projectWorkspaces as projectWorkspacesTable,
 } from "@paperclipai/db";
 import { eq, and, like, desc, inArray, sql } from "drizzle-orm";
 import type {
@@ -21,6 +20,7 @@ import type {
   IssueComment,
   PluginIssueAssigneeSummary,
   PluginIssueOrchestrationSummary,
+  PluginExecutionWorkspaceMetadata,
 } from "@paperclipai/plugin-sdk";
 import type { CreateIssueThreadInteraction, IssueDocumentSummary } from "@paperclipai/shared";
 import { pluginOperationIssueOriginKind } from "@paperclipai/shared";
@@ -71,7 +71,6 @@ import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import { logger } from "../middleware/logger.js";
 import { getTelemetryClient } from "../telemetry.js";
-import { workspaceDiffService } from "./workspace-diff.js";
 
 // ---------------------------------------------------------------------------
 // SSRF protection for plugin HTTP fetch
@@ -524,7 +523,6 @@ export function buildHostServices(
   });
   const projects = projectService(db);
   const executionWorkspaces = executionWorkspaceService(db);
-  const workspaceDiff = workspaceDiffService();
   const issues = issueService(db);
   const documents = documentService(db);
   const goals = goalService(db);
@@ -571,11 +569,6 @@ export function buildHostServices(
    */
   const ensurePluginAvailableForCompany = async (_companyId: string) => {};
 
-  const ensureDeclaredCapability = (capability: import("@paperclipai/shared").PluginCapability) => {
-    if (!options.manifest || options.manifest.capabilities.includes(capability)) return;
-    throw new Error(`Missing required capability: ${capability}`);
-  };
-
   const getLocalFolderDeclaration = (folderKey: string) =>
     requireLocalFolderDeclaration(options.manifest?.localFolders, folderKey);
 
@@ -597,6 +590,35 @@ export function buildHostServices(
     record: T | null | undefined,
     companyId: string,
   ): record is T => Boolean(record && record.companyId === companyId);
+
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+  const readProviderMetadata = (metadata: Record<string, unknown> | null | undefined) => {
+    if (!isRecord(metadata)) return null;
+    if (isRecord(metadata.providerMetadata)) return { ...metadata.providerMetadata };
+    const rebuild = metadata.rebuild;
+    if (!isRecord(rebuild)) return null;
+    const rebuildMetadata = rebuild.metadata;
+    if (!isRecord(rebuildMetadata) || !isRecord(rebuildMetadata.providerMetadata)) return null;
+    return { ...rebuildMetadata.providerMetadata };
+  };
+
+  const toPluginExecutionWorkspaceMetadata = (
+    workspace: NonNullable<Awaited<ReturnType<typeof executionWorkspaces.getById>>>,
+  ): PluginExecutionWorkspaceMetadata => ({
+    id: workspace.id,
+    companyId: workspace.companyId,
+    projectId: workspace.projectId,
+    projectWorkspaceId: workspace.projectWorkspaceId,
+    path: workspace.cwd ?? workspace.providerRef,
+    cwd: workspace.cwd,
+    repoUrl: workspace.repoUrl,
+    baseRef: workspace.baseRef,
+    branchName: workspace.branchName,
+    providerType: workspace.providerType,
+    providerMetadata: readProviderMetadata(workspace.metadata),
+  });
 
   const requireInCompany = <T extends { companyId: string | null | undefined }>(
     entityName: string,
@@ -1208,42 +1230,14 @@ export function buildHostServices(
     },
 
     executionWorkspaces: {
-      async getDiff(params) {
+      async get(params) {
         const companyId = ensureCompanyId(params.companyId);
         await ensurePluginAvailableForCompany(companyId);
         const workspace = await executionWorkspaces.getById(params.workspaceId);
         if (inCompany(workspace, companyId)) {
-          return workspaceDiff.getDiff(workspace, {
-            view: params.options?.view ?? "working-tree",
-            baseRef: params.options?.baseRef ?? null,
-            includeUntracked: params.options?.includeUntracked ?? true,
-            paths: params.options?.paths ?? [],
-          });
+          return toPluginExecutionWorkspaceMetadata(workspace);
         }
-
-        const projectWorkspace = await db
-          .select()
-          .from(projectWorkspacesTable)
-          .where(and(
-            eq(projectWorkspacesTable.id, params.workspaceId),
-            eq(projectWorkspacesTable.companyId, companyId),
-          ))
-          .then((rows) => rows[0] ?? null);
-        if (!projectWorkspace) {
-          throw new Error("Workspace not found");
-        }
-        ensureDeclaredCapability("project.workspaces.read");
-        return workspaceDiff.getDiff({
-          id: projectWorkspace.id,
-          companyId: projectWorkspace.companyId,
-          cwd: projectWorkspace.cwd,
-          baseRef: projectWorkspace.defaultRef ?? projectWorkspace.repoRef ?? null,
-        }, {
-          view: params.options?.view ?? "working-tree",
-          baseRef: params.options?.baseRef ?? null,
-          includeUntracked: params.options?.includeUntracked ?? true,
-          paths: params.options?.paths ?? [],
-        });
+        return null;
       },
     },
 

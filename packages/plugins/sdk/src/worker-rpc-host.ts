@@ -658,8 +658,8 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
       },
 
       executionWorkspaces: {
-        async getDiff(workspaceId: string, companyId: string, options = {}) {
-          return callHost("executionWorkspaces.getDiff", { workspaceId, companyId, options });
+        async get(workspaceId: string, companyId: string) {
+          return callHost("executionWorkspaces.get", { workspaceId, companyId });
         },
       },
 

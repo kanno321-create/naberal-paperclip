@@ -1,7 +1,7 @@
 {
   "name": "@paperclipai/plugin-workspace-diff",
   "version": "0.1.0",
-  "description": "First-party execution workspace Changes tab powered by Paperclip's host diff service",
+  "description": "First-party execution workspace Changes tab powered by plugin-local workspace metadata",
   "type": "module",
   "private": true,
   "exports": {

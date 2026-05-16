@@ -33,6 +33,7 @@ import type {
   ToolResult,
   ToolRunContext,
   PluginWorkspace,
+  PluginExecutionWorkspaceMetadata,
   AgentSession,
   AgentSessionEvent,
   PluginLocalFolderEntry,
@@ -80,6 +81,7 @@ export interface TestHarness {
     issueComments?: IssueComment[];
     agents?: Agent[];
     goals?: Goal[];
+    executionWorkspaces?: PluginExecutionWorkspaceMetadata[];
   }): void;
   setConfig(config: Record<string, unknown>): void;
   /** Dispatch a host or plugin event to registered handlers. */
@@ -438,6 +440,7 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
   const agents = new Map<string, Agent>();
   const goals = new Map<string, Goal>();
   const projectWorkspaces = new Map<string, PluginWorkspace[]>();
+  const executionWorkspaces = new Map<string, PluginExecutionWorkspaceMetadata>();
   const localFolderStatuses = new Map<string, PluginLocalFolderStatus>();
   const localFolderFiles = new Map<string, string>();
 
@@ -976,39 +979,10 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
       },
     },
     executionWorkspaces: {
-      async getDiff(workspaceId, companyId, options) {
+      async get(workspaceId, companyId) {
         requireCapability(manifest, capabilitySet, "execution.workspaces.read");
-        return {
-          workspaceId,
-          companyId,
-          repoRoot: "/tmp/paperclip-test",
-          cwd: "/tmp/paperclip-test",
-          view: options?.view ?? "working-tree",
-          baseRef: options?.baseRef ?? null,
-          headSha: null,
-          includeUntracked: options?.includeUntracked ?? true,
-          paths: options?.paths ?? [],
-          files: [],
-          stats: {
-            fileCount: 0,
-            stagedFileCount: 0,
-            unstagedFileCount: 0,
-            untrackedFileCount: 0,
-            binaryFileCount: 0,
-            oversizedFileCount: 0,
-            truncatedFileCount: 0,
-            additions: 0,
-            deletions: 0,
-          },
-          warnings: [],
-          caps: {
-            maxFiles: 0,
-            maxFileBytes: 0,
-            maxPatchBytes: 0,
-            maxTotalPatchBytes: 0,
-          },
-          truncated: false,
-        };
+        const workspace = executionWorkspaces.get(workspaceId);
+        return workspace?.companyId === companyId ? workspace : null;
       },
     },
     routines: {
@@ -2084,6 +2058,7 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
       }
       for (const row of input.agents ?? []) agents.set(row.id, row);
       for (const row of input.goals ?? []) goals.set(row.id, row);
+      for (const row of input.executionWorkspaces ?? []) executionWorkspaces.set(row.id, row);
     },
     setConfig(config) {
       currentConfig = { ...config };
