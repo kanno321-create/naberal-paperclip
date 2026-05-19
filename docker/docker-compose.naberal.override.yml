@@ -1,0 +1,5 @@
+services:
+  paperclip:
+    container_name: naberal-paperclip
+    volumes:
+      - "C:/dev/naberal-plugins:/plugins:rw"

@@ -1,0 +1,33 @@
+# NABERAL fork — Linux container 빌드 호환성 fix
+# Windows host (CRLF 기본) 에서 .sh 파일이 Docker Linux container 에 CRLF 으로 들어가면
+# shebang 파싱 실패로 "no such file or directory" 에러 발생.
+# upstream paperclipai/paperclip 에 .gitattributes 부재 → NABERAL fork 가 신축.
+
+* text=auto
+
+# Shell / executable scripts must use LF for Linux compatibility
+*.sh text eol=lf
+*.bash text eol=lf
+docker-entrypoint* text eol=lf
+
+# Dockerfile / compose
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf
+*.dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# JavaScript / TypeScript (ESM module loader)
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# Binary files (no conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
